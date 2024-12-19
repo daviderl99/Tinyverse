@@ -14,6 +14,10 @@ export function initializeControls(controlsInstance, starSystemsArray) {
     window.starSystems = starSystemsArray; // Make starSystems available globally
 }
 
+export function getOrbitVisibility() {
+    return orbitsVisible;
+}
+
 export function focusOnObject(object) {
     const targetPosition = new THREE.Vector3();
     object.getWorldPosition(targetPosition);
@@ -46,7 +50,11 @@ export function focusOnObject(object) {
 
 export function updateOrbitVisibility(starSystem, visible) {
     starSystem.planets.forEach(planet => {
-        planet.orbitLine.visible = visible;
+        // Get the orbit line (first child) and planet (second child)
+        const orbitLine = planet.orbit.children[0];
+        orbitLine.visible = visible;
+
+        // Show/hide moon orbits
         planet.moons.forEach(moon => {
             moon.orbit.children[0].visible = visible;
         });
@@ -95,11 +103,11 @@ export function handleStarClick(event) {
     if (intersects.length > 0) {
         // Sort by distance
         intersects.sort((a, b) => a.distance - b.distance);
-        const closestObject = intersects[0].object;
+        const clickedObject = intersects[0].object;
 
         // Determine object type
         let type = null;
-        let parent = closestObject;
+        let parent = clickedObject;
         while (parent.parent) {
             if (parent.parent === scene) {
                 type = 'star';
@@ -114,17 +122,35 @@ export function handleStarClick(event) {
             parent = parent.parent;
         }
 
-        if (selectedObject === closestObject) {
+        if (selectedObject === clickedObject) {
             // Deselect if clicking the same object
             selectedObject = null;
             selectedType = null;
             removeCrosshair();
         } else {
             // Select new object
-            selectedObject = closestObject;
+            selectedObject = clickedObject;
             selectedType = type;
             createCrosshair(selectedObject, selectedType);
             focusOnObject(selectedObject);
+        }
+        
+        // Find the star system that was clicked
+        const starSystem = window.starSystems.find(system => 
+            system.star === clickedObject || 
+            system.planets.some(planet => planet.mesh === clickedObject)
+        );
+        
+        if (starSystem) {
+            window.lastSelectedStarSystem = starSystem;
+            
+            // Update orbit visibility if orbits are enabled
+            if (orbitsVisible) {
+                window.starSystems.forEach(sys => {
+                    updateOrbitVisibility(sys, false);
+                });
+                updateOrbitVisibility(starSystem, true);
+            }
         }
     } else {
         // Clicked empty space
@@ -135,11 +161,20 @@ export function handleStarClick(event) {
 }
 
 export function onKeyPress(event) {
-    if (event.key === 'o' || event.key === 'O') {
+    if (event.key === 'o') {
         orbitsVisible = !orbitsVisible;
-        starSystems.forEach(system => {
-            updateOrbitVisibility(system, orbitsVisible);
-        });
+        
+        // Hide all orbits first
+        if (window.starSystems) {
+            window.starSystems.forEach(starSystem => {
+                updateOrbitVisibility(starSystem, false);
+            });
+        }
+        
+        // Show only the last selected star system's orbits if orbits are visible
+        if (orbitsVisible && window.lastSelectedStarSystem) {
+            updateOrbitVisibility(window.lastSelectedStarSystem, true);
+        }
     } else if (event.key === 'f' || event.key === 'F') {
         if (selectedObject) {
             focusOnObject(selectedObject);

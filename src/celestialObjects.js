@@ -57,9 +57,9 @@ export function createMoon(planetRadius) {
     const orbitLine = new THREE.Line(
         orbitGeometry,
         new THREE.LineBasicMaterial({ 
-            color: 0x444444, 
+            color: 0x666666, 
             transparent: true, 
-            opacity: 0.3 
+            opacity: 0.5 
         })
     );
     orbit.add(orbitLine);
@@ -106,9 +106,9 @@ export function createPlanet(starPosition) {
     const orbitLine = new THREE.Line(
         orbitGeometry,
         new THREE.LineBasicMaterial({ 
-            color: 0x444444, 
+            color: 0x666666, 
             transparent: true, 
-            opacity: 0.3 
+            opacity: 0.5 
         })
     );
     orbit.add(orbitLine);
