@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { STAR_CONFIG, PLANET_CONFIG, MOON_CONFIG } from './config.js';
+import { STAR_CONFIG, PLANET_CONFIG, MOON_CONFIG, CAMERA_CONFIG } from './config.js';
 import { getStarColor, getPlanetColor } from './utils.js';
 
 // Helper function to check distance between stars
@@ -35,9 +35,9 @@ export function createMoon(planetRadius) {
     const maxOrbit = planetRadius * MOON_CONFIG.MAX_ORBIT_RATIO;
     const orbitRadius = Math.random() * (maxOrbit - minOrbit) + minOrbit;
     
-    const orbitSpeed = (0.005 / Math.sqrt(orbitRadius)) + 0.001;
+    const orbitSpeed = MOON_CONFIG.ORBIT_SPEED_FACTOR / Math.sqrt(orbitRadius);
     const orbitAngle = Math.random() * Math.PI * 2;
-    const orbitTilt = Math.random() * Math.PI / 4;
+    const orbitTilt = Math.random() * Math.PI / 3; // More varied tilt
     
     const orbit = new THREE.Object3D();
     orbit.rotation.x = orbitTilt;
@@ -118,13 +118,29 @@ export function createPlanet(starPosition) {
     planet.position.z = orbitRadius * Math.sin(orbitAngle);
     orbit.add(planet);
 
-    // Add random number of moons (0-3)
-    const moonCount = Math.floor(Math.random() * 4);
+    // Add random number of moons based on config
+    const moonCount = Math.floor(Math.random() * (MOON_CONFIG.MAX_MOONS - MOON_CONFIG.MIN_MOONS + 1)) + MOON_CONFIG.MIN_MOONS;
     const moons = [];
+    
+    // Create moons with non-overlapping orbits
+    const usedOrbits = [];
     for (let i = 0; i < moonCount; i++) {
-        const moon = createMoon(radius);
-        orbit.add(moon.orbit);
-        moons.push(moon);
+        let moon = createMoon(radius);  
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        // Ensure moons don't share similar orbits
+        while (attempts < maxAttempts && 
+               usedOrbits.some(usedOrbit => Math.abs(moon.orbit.children[1].position.x - usedOrbit) < radius * 3)) {
+            moon = createMoon(radius);
+            attempts++;
+        }
+        
+        if (attempts < maxAttempts) {
+            usedOrbits.push(moon.orbit.children[1].position.x);
+            planet.add(moon.orbit);  
+            moons.push(moon);
+        }
     }
 
     return { 
@@ -172,20 +188,24 @@ export function createStar() {
 
     star.position.copy(position);
 
-    // Store the star's position for future distance checks
     if (!window.existingStars) window.existingStars = [];
     window.existingStars.push(star);
 
-    // Create random number of planets (1-5)
-    const planetCount = Math.floor(Math.random() * 5) + 1;
+    // Only create planets if star is within the planet visible range
+    const distanceFromCenter = position.length();
     const planets = [];
-    for (let i = 0; i < planetCount; i++) {
-        const planet = createPlanet(star.position);
-        planets.push(planet);
+    
+    if (distanceFromCenter <= CAMERA_CONFIG.PLANET_VISIBLE_RANGE) {
+        const planetCount = Math.floor(Math.random() * 5) + 1;
+        for (let i = 0; i < planetCount; i++) {
+            const planet = createPlanet(star.position);
+            planets.push(planet);
+        }
     }
 
     return {
         star,
-        planets
+        planets,
+        distanceFromCenter  // Add this for distance-based optimizations
     };
 }

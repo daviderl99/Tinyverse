@@ -27,7 +27,13 @@ for (let i = 0; i < STAR_CONFIG.COUNT; i++) {
         planet.orbitLine.visible = false;
         planet.orbitLine.material.opacity = 0.3; // Keep orbit lines slightly transparent
         planet.moons.forEach(moon => {
-            moon.orbit.children[0].visible = false;  // Set moon orbits to be invisible by default
+            moon.orbit.children.forEach(child => {
+                if (child instanceof THREE.Line) {
+                    child.visible = false;  // Hide moon orbit lines
+                } else if (child instanceof THREE.Mesh) {
+                    child.visible = true;   // Show moon meshes
+                }
+            });
         });
     });
 }
@@ -63,13 +69,14 @@ function animate() {
         const distanceToCamera = starWorldPos.distanceTo(cameraPosition);
         const starInView = frustum.containsPoint(starWorldPos);
         const isNearby = distanceToCamera <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
+        const isPlanetRange = distanceToCamera <= CAMERA_CONFIG.PLANET_VISIBLE_RANGE;
         
         // Calculate opacity based on distance
         let opacity = 1;
         if (distanceToCamera > CAMERA_CONFIG.FADE_START) {
             opacity = 1 - (distanceToCamera - CAMERA_CONFIG.FADE_START) / 
                         (CAMERA_CONFIG.FADE_END - CAMERA_CONFIG.FADE_START);
-            opacity = Math.max(0, Math.min(1, opacity)); // Clamp between 0 and 1
+            opacity = Math.max(0, Math.min(1, opacity));
         }
         
         // Update star visibility and opacity
@@ -83,73 +90,60 @@ function animate() {
             starSystem.star.visible = false;
         }
         
-        starSystem.planets.forEach(({ planet, orbit, orbitSpeed, moons, orbitLine }) => {
-            orbit.rotation.y += orbitSpeed;
-            
-            // Only check planet visibility if star is visible or nearby
-            if (starSystem.star.visible || isNearby) {
-                const planetWorldPos = new THREE.Vector3();
-                planet.getWorldPosition(planetWorldPos);
-                const planetInView = frustum.containsPoint(planetWorldPos);
-                const planetDistance = planetWorldPos.distanceTo(cameraPosition);
-                const planetNearby = planetDistance <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
+        // Only process planets if they should be visible
+        if (isPlanetRange && starSystem.planets.length > 0) {
+            starSystem.planets.forEach(({ planet, orbit, orbitSpeed, moons, orbitLine }) => {
+                orbit.rotation.y += orbitSpeed;
                 
-                planet.visible = planetInView || planetNearby;
-                if (planet.visible) {
-                    planet.material.opacity = opacity;
-                    if (!planet.material.transparent && opacity < 1) {
-                        planet.material.transparent = true;
+                if (starSystem.star.visible || isNearby) {
+                    const planetWorldPos = new THREE.Vector3();
+                    planet.getWorldPosition(planetWorldPos);
+                    const planetInView = frustum.containsPoint(planetWorldPos);
+                    const planetDistance = planetWorldPos.distanceTo(cameraPosition);
+                    const planetNearby = planetDistance <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
+                    
+                    orbit.visible = true;
+                    planet.visible = planetInView || planetNearby;
+                    if (planet.visible) {
+                        planet.material.opacity = opacity;
+                        if (!planet.material.transparent && opacity < 1) {
+                            planet.material.transparent = true;
+                        }
                     }
-                }
-                
-                // Update orbit visibility based on view and opacity
-                if (planetInView || planetNearby) {
-                    if (getOrbitVisibility() && window.lastSelectedStarSystem === starSystem) {
-                        updateOrbitVisibility(starSystem, true);
-                        orbitLine.material.opacity = opacity * 0.3;
+                    
+                    // Update orbit visibility
+                    if (planetInView || planetNearby) {
+                        if (getOrbitVisibility() && window.lastSelectedStarSystem === starSystem) {
+                            orbitLine.visible = true;
+                            orbitLine.material.opacity = opacity * 0.3;
+                        } else {
+                            orbitLine.visible = false;
+                        }
                     } else {
-                        updateOrbitVisibility(starSystem, false);
+                        orbitLine.visible = false;
+                    }
+                    
+                    // Update moons only if planet is visible
+                    if (planet.visible) {
+                        moons.forEach(({ orbit: moonOrbit, orbitSpeed: moonSpeed }) => {
+                            moonOrbit.rotation.y += moonSpeed;
+                            moonOrbit.visible = true;
+                        });
+                    } else {
+                        moons.forEach(({ orbit: moonOrbit }) => {
+                            moonOrbit.visible = false;
+                        });
                     }
                 } else {
-                    updateOrbitVisibility(starSystem, false);
+                    orbit.visible = false;
                 }
-                
-                moons.forEach(({ orbit: moonOrbit, orbitSpeed: moonSpeed }) => {
-                    moonOrbit.rotation.y += moonSpeed;
-                    
-                    if (planetInView || planetNearby) {
-                        moonOrbit.children.forEach(child => {
-                            if (child instanceof THREE.Mesh) {
-                                const moonWorldPos = new THREE.Vector3();
-                                child.getWorldPosition(moonWorldPos);
-                                const moonInView = frustum.containsPoint(moonWorldPos);
-                                const moonDistance = moonWorldPos.distanceTo(cameraPosition);
-                                const moonNearby = moonDistance <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
-                                child.visible = moonInView || moonNearby;
-                                if (child.visible) {
-                                    child.material.opacity = opacity;
-                                    if (!child.material.transparent && opacity < 1) {
-                                        child.material.transparent = true;
-                                    }
-                                }
-                            }
-                        });
-                    } else {
-                        moonOrbit.children.forEach(child => {
-                            child.visible = false;
-                        });
-                    }
-                });
-            } else {
-                planet.visible = false;
-                orbitLine.visible = false;
-                moons.forEach(({ orbit: moonOrbit }) => {
-                    moonOrbit.children.forEach(child => {
-                        child.visible = false;
-                    });
-                });
-            }
-        });
+            });
+        } else if (starSystem.planets.length > 0) {
+            // Hide all planets and moons if star is too far
+            starSystem.planets.forEach(({ orbit }) => {
+                orbit.visible = false;
+            });
+        }
     });
     
     renderer.render(scene, camera);
