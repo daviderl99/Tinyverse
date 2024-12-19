@@ -10,7 +10,7 @@ export const SCALE = {
 export const CAMERA_CONFIG = {
     FOV: 75,                // Field of view in degrees - higher values create a wider view angle
     NEAR: 0.01,            // Nearest visible distance (0.01 light years ~ 95 billion km)
-    FAR: 100,               // Farthest visible distance (10,000 light years)
+    FAR: 100000,               // Farthest visible distance (100,000 light years)
     INITIAL_Z: 10,         // Starting distance of 10 light years from center
     FADE_START: 1000,      // Stars start fading at 1,000 light years
     FADE_END: 2000,        // Stars completely fade at 2,000 light years
@@ -23,10 +23,11 @@ export const STAR_CONFIG = {
     COUNT: 500,             // Total number of star systems to generate
     MIN_RADIUS: SCALE.SOLAR_RADIUS * SCALE.VISUAL_MULTIPLIER * 0.5,  // Minimum star size (half solar radius)
     MAX_RADIUS: SCALE.SOLAR_RADIUS * SCALE.VISUAL_MULTIPLIER * 5.0,  // Maximum star size (5x solar radius)
-    MIN_TEMP: 1000,        // Minimum star temperature in Kelvin (redder stars)
-    MAX_TEMP: 10000,       // Maximum star temperature in Kelvin (bluer stars)
-    SPACE_RANGE: 200,      // Size of the cubic space (100 light years per side)
-    MIN_DISTANCE: 100        // Minimum distance between stars (light years)
+    MIN_TEMP: 1000,         // Minimum star temperature in Kelvin (redder stars)
+    MAX_TEMP: 10000,        // Maximum star temperature in Kelvin (bluer stars)
+    SPACE_RANGE: 1000,      // Size of the cubic space (1000 light years per side)
+    MIN_DISTANCE: 10,       // Minimum distance between stars (10 light years)
+    HAS_PLANETS_CHANCE: 0.7 // 70% chance a star has planets (based on Kepler data)
 };
 
 // Planet generation settings (sizes relative to star)

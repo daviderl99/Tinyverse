@@ -3,7 +3,7 @@ import { STAR_CONFIG, CAMERA_CONFIG } from './config.js';
 import { scene, camera, createRenderer, createControls, handleResize } from './scene.js';
 import { initializeStyles } from './ui.js';
 import { createStar } from './celestialObjects.js';
-import { onMouseDown, onMouseUp, onKeyPress, onMouseMove, updateOrbitVisibility, initializeControls, getOrbitVisibility } from './controls.js';
+import { onMouseDown, onMouseUp, onKeyPress, onMouseMove, updateOrbitVisibility, initializeControls, getOrbitVisibility, isPaused } from './controls.js';
 
 // Initialize scene
 const renderer = createRenderer();
@@ -51,6 +51,9 @@ function animate() {
     // Update controls
     controls.update();
     
+    // Skip updates if paused
+    // if (isPaused) return;
+
     // Update frustum for culling
     const frustum = new THREE.Frustum();
     const projScreenMatrix = new THREE.Matrix4();
@@ -58,24 +61,24 @@ function animate() {
     frustum.setFromProjectionMatrix(projScreenMatrix);
     
     // Get camera position for distance calculations
-    const cameraPosition = camera.position;
+    const cameraPosition = new THREE.Vector3();
+    camera.getWorldPosition(cameraPosition);
     
     // Rotate planets and moons, and handle visibility
     starSystems.forEach(starSystem => {
         // Check if star is in view and within distance range
-        const starWorldPos = new THREE.Vector3();
-        starSystem.star.getWorldPosition(starWorldPos);
+        const starPosition = new THREE.Vector3();
+        starSystem.star.getWorldPosition(starPosition);
+        const distanceToCamera = starPosition.distanceTo(cameraPosition);
         
-        const distanceToCamera = starWorldPos.distanceTo(cameraPosition);
-        const starInView = frustum.containsPoint(starWorldPos);
+        // Calculate visibility and opacity
+        const starInView = frustum.containsPoint(starPosition);
         const isNearby = distanceToCamera <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
         const isPlanetRange = distanceToCamera <= CAMERA_CONFIG.PLANET_VISIBLE_RANGE;
         
-        // Calculate opacity based on distance
         let opacity = 1;
         if (distanceToCamera > CAMERA_CONFIG.FADE_START) {
-            opacity = 1 - (distanceToCamera - CAMERA_CONFIG.FADE_START) / 
-                        (CAMERA_CONFIG.FADE_END - CAMERA_CONFIG.FADE_START);
+            opacity = 1 - (distanceToCamera - CAMERA_CONFIG.FADE_START) / (CAMERA_CONFIG.FADE_END - CAMERA_CONFIG.FADE_START);
             opacity = Math.max(0, Math.min(1, opacity));
         }
         
@@ -93,7 +96,10 @@ function animate() {
         // Only process planets if they should be visible
         if (isPlanetRange && starSystem.planets.length > 0) {
             starSystem.planets.forEach(({ planet, orbit, orbitSpeed, moons, orbitLine }) => {
-                orbit.rotation.y += orbitSpeed;
+                // Only update orbital motion if not paused
+                if (!isPaused) {
+                    orbit.rotation.y += orbitSpeed;
+                }
                 
                 if (starSystem.star.visible || isNearby) {
                     const planetWorldPos = new THREE.Vector3();
@@ -126,7 +132,10 @@ function animate() {
                     // Update moons only if planet is visible
                     if (planet.visible) {
                         moons.forEach(({ orbit: moonOrbit, orbitSpeed: moonSpeed }) => {
-                            moonOrbit.rotation.y += moonSpeed;
+                            // Only update orbital motion if not paused
+                            if (!isPaused) {
+                                moonOrbit.rotation.y += moonSpeed;
+                            }
                             moonOrbit.visible = true;
                         });
                     } else {

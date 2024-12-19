@@ -8,6 +8,7 @@ let selectedType = null;
 let mouseDownPos = null;
 let orbitsVisible = false;
 let controls;
+export let isPaused = false;
 
 export function initializeControls(controlsInstance, starSystemsArray) {
     controls = controlsInstance;
@@ -85,6 +86,11 @@ export function handleStarClick(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
+    // Set very tight precision for raycasting
+    raycaster.params.Line.threshold = 0.001;
+    raycaster.params.Points.threshold = 0.001;
+    raycaster.params.Mesh.threshold = 0;
+    
     raycaster.setFromCamera(mouse, camera);
 
     let intersects = [];
@@ -179,6 +185,8 @@ export function onKeyPress(event) {
         if (selectedObject) {
             focusOnObject(selectedObject);
         }
+    } else if (event.key === ' ') { // Spacebar
+        isPaused = !isPaused;
     }
 }
 

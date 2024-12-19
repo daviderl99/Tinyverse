@@ -167,17 +167,12 @@ export function createStar() {
     const maxAttempts = 50;
 
     do {
-        // Use Gaussian distribution for each coordinate
+        // Generate position within the space range
         position.set(
-            gaussianRandom(0, range / 4),
-            gaussianRandom(0, range / 6), // Less vertical spread
-            gaussianRandom(0, range / 4)
+            (Math.random() - 0.5) * STAR_CONFIG.SPACE_RANGE,
+            (Math.random() - 0.5) * STAR_CONFIG.SPACE_RANGE,
+            (Math.random() - 0.5) * STAR_CONFIG.SPACE_RANGE
         );
-
-        // Add some randomness to create occasional outliers
-        if (Math.random() < 0.1) { // 10% chance for outliers
-            position.multiplyScalar(Math.random() * 2 + 1);
-        }
 
         attempts++;
     } while (
@@ -191,11 +186,10 @@ export function createStar() {
     if (!window.existingStars) window.existingStars = [];
     window.existingStars.push(star);
 
-    // Only create planets if star is within the planet visible range
     const distanceFromCenter = position.length();
     const planets = [];
     
-    if (distanceFromCenter <= CAMERA_CONFIG.PLANET_VISIBLE_RANGE) {
+    if (Math.random() < STAR_CONFIG.HAS_PLANETS_CHANCE) {
         const planetCount = Math.floor(Math.random() * 5) + 1;
         for (let i = 0; i < planetCount; i++) {
             const planet = createPlanet(star.position);
@@ -206,6 +200,6 @@ export function createStar() {
     return {
         star,
         planets,
-        distanceFromCenter  // Add this for distance-based optimizations
+        distanceFromCenter
     };
 }
