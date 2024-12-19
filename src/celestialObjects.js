@@ -152,13 +152,50 @@ export function createPlanet(starPosition) {
     };
 }
 
+// Add glow shader
+const vertexShader = `
+    varying vec3 vNormal;
+    void main() {
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+`;
+
+const fragmentShader = `
+    varying vec3 vNormal;
+    uniform vec3 glowColor;
+    uniform float intensity;
+    void main() {
+        float strength = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.0);
+        gl_FragColor = vec4(glowColor, strength * intensity);
+    }
+`;
+
 export function createStar() {
     const radius = Math.random() * (STAR_CONFIG.MAX_RADIUS - STAR_CONFIG.MIN_RADIUS) + STAR_CONFIG.MIN_RADIUS;
     const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const temperature = Math.random() * (STAR_CONFIG.MAX_TEMP - STAR_CONFIG.MIN_TEMP) + STAR_CONFIG.MIN_TEMP;
     const color = getStarColor(temperature);
+    
+    // Create the main star material
     const material = new THREE.MeshBasicMaterial({ color: color });
     const star = new THREE.Mesh(geometry, material);
+
+    // Create the glow effect
+    const glowGeometry = new THREE.SphereGeometry(radius * 1.2, 32, 32);
+    const glowMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            glowColor: { value: new THREE.Color(color) },
+            intensity: { value: 1.0 }
+        },
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader,
+        transparent: true,
+        side: THREE.BackSide,
+        blending: THREE.AdditiveBlending
+    });
+    const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+    star.add(glowMesh);
 
     // Use Gaussian distribution for more realistic star clustering
     const range = STAR_CONFIG.SPACE_RANGE;
