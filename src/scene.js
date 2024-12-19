@@ -1,14 +1,20 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/controls';
+import { CAMERA_CONFIG } from './config.js';
 
 // Scene setup
 export const scene = new THREE.Scene();
-export const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+export const camera = new THREE.PerspectiveCamera(
+    CAMERA_CONFIG.FOV,
+    window.innerWidth / window.innerHeight,
+    CAMERA_CONFIG.NEAR,
+    CAMERA_CONFIG.FAR
+);
 export const raycaster = new THREE.Raycaster();
 export const mouse = new THREE.Vector2();
 
 // Initialize camera
-camera.position.z = 50;
+camera.position.z = CAMERA_CONFIG.INITIAL_Z;
 
 // Create renderer
 export function createRenderer() {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ANIMATION_DURATION, DRAG_THRESHOLD } from './config.js';
+import { CONTROLS_CONFIG } from './config.js';
 import { camera, mouse, raycaster, scene } from './scene.js';
 import { createCrosshair, removeCrosshair, updateCrosshairPosition } from './ui.js';
 
@@ -18,8 +18,8 @@ export function focusOnObject(object) {
     const targetPosition = new THREE.Vector3();
     object.getWorldPosition(targetPosition);
     
-    const distance = selectedType === 'moon' ? 1 :
-                    selectedType === 'planet' ? 3 : 20;
+    const distance = selectedType === 'moon' ? CONTROLS_CONFIG.MIN_DISTANCE :
+                    selectedType === 'planet' ? CONTROLS_CONFIG.MIN_DISTANCE * 3 : CONTROLS_CONFIG.MIN_DISTANCE * 20;
     
     const startPosition = camera.position.clone();
     const startRotation = controls.target.clone();
@@ -27,7 +27,7 @@ export function focusOnObject(object) {
 
     function animateCamera() {
         const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+        const progress = Math.min(elapsed / CONTROLS_CONFIG.ANIMATION_DURATION, 1);
         
         const t = progress < 0.5 ? 2 * progress * progress : -1 + (4 - 2 * progress) * progress;
         
@@ -64,7 +64,7 @@ export function onMouseUp(event) {
     const dy = event.clientY - mouseDownPos.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    if (distance < DRAG_THRESHOLD) {
+    if (distance < CONTROLS_CONFIG.DRAG_THRESHOLD) {
         handleStarClick(event);
     }
     

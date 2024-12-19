@@ -1,9 +1,29 @@
 import * as THREE from 'three';
-import { PLANET_ORBIT, MOON_ORBIT } from './config.js';
+import { STAR_CONFIG, PLANET_CONFIG, MOON_CONFIG } from './config.js';
 import { getStarColor, getPlanetColor } from './utils.js';
 
+// Helper function to check distance between stars
+function getDistanceToNearestStar(position, existingStars) {
+    let minDistance = Infinity;
+    for (const star of existingStars) {
+        const distance = position.distanceTo(star.position);
+        if (distance < minDistance) {
+            minDistance = distance;
+        }
+    }
+    return minDistance;
+}
+
+// Helper function for Gaussian distribution
+function gaussianRandom(mean = 0, stdev = 1) {
+    const u = 1 - Math.random();
+    const v = Math.random();
+    const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+    return z * stdev + mean;
+}
+
 export function createMoon(planetRadius) {
-    const radius = planetRadius * (Math.random() * 0.3 + 0.1);
+    const radius = planetRadius * (Math.random() * (MOON_CONFIG.MAX_SIZE_RATIO - MOON_CONFIG.MIN_SIZE_RATIO) + MOON_CONFIG.MIN_SIZE_RATIO);
     const geometry = new THREE.SphereGeometry(radius, 16, 16);
     
     const baseColor = Math.random() * 0.3 + 0.5;
@@ -11,8 +31,8 @@ export function createMoon(planetRadius) {
     const material = new THREE.MeshBasicMaterial({ color: color });
     const moon = new THREE.Mesh(geometry, material);
 
-    const minOrbit = planetRadius * MOON_ORBIT.MIN_MULTIPLIER;
-    const maxOrbit = planetRadius * MOON_ORBIT.MAX_MULTIPLIER;
+    const minOrbit = planetRadius * MOON_CONFIG.MIN_ORBIT_RATIO;
+    const maxOrbit = planetRadius * MOON_CONFIG.MAX_ORBIT_RATIO;
     const orbitRadius = Math.random() * (maxOrbit - minOrbit) + minOrbit;
     
     const orbitSpeed = (0.005 / Math.sqrt(orbitRadius)) + 0.001;
@@ -42,7 +62,6 @@ export function createMoon(planetRadius) {
             opacity: 0.3 
         })
     );
-    orbitLine.visible = false;
     orbit.add(orbitLine);
 
     moon.position.x = orbitRadius * Math.cos(orbitAngle);
@@ -53,15 +72,15 @@ export function createMoon(planetRadius) {
 }
 
 export function createPlanet(starPosition) {
-    const radius = Math.random() * 0.1 + 0.05;
+    const radius = Math.random() * (PLANET_CONFIG.MAX_RADIUS - PLANET_CONFIG.MIN_RADIUS) + PLANET_CONFIG.MIN_RADIUS;
     const geometry = new THREE.SphereGeometry(radius, 16, 16);
     
     const color = getPlanetColor();
     const material = new THREE.MeshBasicMaterial({ color: color });
     const planet = new THREE.Mesh(geometry, material);
 
-    const minOrbit = PLANET_ORBIT.MIN_RADIUS;
-    const maxOrbit = PLANET_ORBIT.MAX_RADIUS;
+    const minOrbit = PLANET_CONFIG.MIN_ORBIT;
+    const maxOrbit = PLANET_CONFIG.MAX_ORBIT;
     const orbitRadius = Math.random() * (maxOrbit - minOrbit) + minOrbit;
     
     const orbitSpeed = (0.002 / Math.sqrt(orbitRadius)) + 0.0002;
@@ -92,7 +111,6 @@ export function createPlanet(starPosition) {
             opacity: 0.3 
         })
     );
-    orbitLine.visible = false;
     orbit.add(orbitLine);
 
     // Position planet in orbit
@@ -119,16 +137,44 @@ export function createPlanet(starPosition) {
 }
 
 export function createStar() {
-    const geometry = new THREE.SphereGeometry(1, 32, 32);
-    const temperature = Math.random() * 15000 + 2000; // Temperature between 2000K and 17000K
+    const radius = Math.random() * (STAR_CONFIG.MAX_RADIUS - STAR_CONFIG.MIN_RADIUS) + STAR_CONFIG.MIN_RADIUS;
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
+    const temperature = Math.random() * (STAR_CONFIG.MAX_TEMP - STAR_CONFIG.MIN_TEMP) + STAR_CONFIG.MIN_TEMP;
     const color = getStarColor(temperature);
     const material = new THREE.MeshBasicMaterial({ color: color });
     const star = new THREE.Mesh(geometry, material);
 
-    // Random position within bounds
-    star.position.x = (Math.random() - 0.5) * 200;
-    star.position.y = (Math.random() - 0.5) * 200;
-    star.position.z = (Math.random() - 0.5) * 200;
+    // Use Gaussian distribution for more realistic star clustering
+    const range = STAR_CONFIG.SPACE_RANGE;
+    let position = new THREE.Vector3();
+    let attempts = 0;
+    const maxAttempts = 50;
+
+    do {
+        // Use Gaussian distribution for each coordinate
+        position.set(
+            gaussianRandom(0, range / 4),
+            gaussianRandom(0, range / 6), // Less vertical spread
+            gaussianRandom(0, range / 4)
+        );
+
+        // Add some randomness to create occasional outliers
+        if (Math.random() < 0.1) { // 10% chance for outliers
+            position.multiplyScalar(Math.random() * 2 + 1);
+        }
+
+        attempts++;
+    } while (
+        window.existingStars && 
+        getDistanceToNearestStar(position, window.existingStars) < STAR_CONFIG.MIN_DISTANCE && 
+        attempts < maxAttempts
+    );
+
+    star.position.copy(position);
+
+    // Store the star's position for future distance checks
+    if (!window.existingStars) window.existingStars = [];
+    window.existingStars.push(star);
 
     // Create random number of planets (1-5)
     const planetCount = Math.floor(Math.random() * 5) + 1;
