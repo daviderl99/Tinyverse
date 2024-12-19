@@ -113,7 +113,7 @@ function focusOnObject(object) {
 }
 
 // Create stars
-const starCount = 500;
+const starCount = 100;
 const stars = [];
 const starSystems = [];
 
@@ -222,7 +222,7 @@ function createPlanet(starPosition) {
     planet.position.x = orbitRadius * Math.cos(orbitAngle);
     planet.position.z = orbitRadius * Math.sin(orbitAngle);
     
-    // Add atmosphere to 30% of planets
+    // Add 'atmosphere' to 30% of planets
     if (Math.random() < 0.3) {
         const atmosphereGeometry = new THREE.SphereGeometry(radius * 1.15, 16, 16);
         const atmosphereMaterial = new THREE.ShaderMaterial({
