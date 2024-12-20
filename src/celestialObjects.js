@@ -22,13 +22,29 @@ function gaussianRandom(mean = 0, stdev = 1) {
     return z * stdev + mean;
 }
 
-export function createMoon(planetRadius) {
+// Helper function to get geometry detail level based on distance
+function getDetailLevel(distance) {
+    const { DETAIL_LEVELS } = CAMERA_CONFIG;
+    if (distance <= DETAIL_LEVELS.NEAR.distance) return DETAIL_LEVELS.NEAR.segments;
+    if (distance <= DETAIL_LEVELS.MEDIUM.distance) return DETAIL_LEVELS.MEDIUM.segments;
+    return DETAIL_LEVELS.FAR.segments;
+}
+
+export function createMoon(planetRadius, distanceFromCamera) {
+    const segments = getDetailLevel(distanceFromCamera);
     const radius = planetRadius * (Math.random() * (MOON_CONFIG.MAX_SIZE_RATIO - MOON_CONFIG.MIN_SIZE_RATIO) + MOON_CONFIG.MIN_SIZE_RATIO);
-    const geometry = new THREE.SphereGeometry(radius, 16, 16);
+    const geometry = new THREE.SphereGeometry(radius, segments, segments);
     
     const baseColor = Math.random() * 0.3 + 0.5;
     const color = new THREE.Color(baseColor, baseColor * 0.95, baseColor * 0.8);
-    const material = new THREE.MeshBasicMaterial({ color: color });
+    const material = new THREE.MeshPhongMaterial({ 
+        color: color,
+        shininess: 0,
+        emissive: new THREE.Color(0x000000),
+        emissiveIntensity: 0,
+        reflectivity: 0.1,    // Low reflectivity for moons
+        specular: new THREE.Color(0x111111)  // Very minimal specular highlights
+    });
     const moon = new THREE.Mesh(geometry, material);
 
     const minOrbit = planetRadius * MOON_CONFIG.MIN_ORBIT_RATIO;
@@ -71,12 +87,20 @@ export function createMoon(planetRadius) {
     return { orbit, orbitSpeed };
 }
 
-export function createPlanet(starPosition) {
+export function createPlanet(starPosition, distanceFromCamera) {
+    const segments = getDetailLevel(distanceFromCamera);
     const radius = Math.random() * (PLANET_CONFIG.MAX_RADIUS - PLANET_CONFIG.MIN_RADIUS) + PLANET_CONFIG.MIN_RADIUS;
-    const geometry = new THREE.SphereGeometry(radius, 16, 16);
+    const geometry = new THREE.SphereGeometry(radius, segments, segments);
     
     const color = getPlanetColor();
-    const material = new THREE.MeshBasicMaterial({ color: color });
+    const material = new THREE.MeshPhongMaterial({ 
+        color: color,
+        shininess: 5,
+        emissive: new THREE.Color(0x000000),
+        emissiveIntensity: 0,
+        reflectivity: 0.2,    // Reduce reflectivity to maintain planet's base color
+        specular: new THREE.Color(0x222222)  // Very subtle specular highlights
+    });
     const planet = new THREE.Mesh(geometry, material);
 
     const minOrbit = PLANET_CONFIG.MIN_ORBIT;
@@ -125,14 +149,14 @@ export function createPlanet(starPosition) {
     // Create moons with non-overlapping orbits
     const usedOrbits = [];
     for (let i = 0; i < moonCount; i++) {
-        let moon = createMoon(radius);  
+        let moon = createMoon(radius, distanceFromCamera);  
         let attempts = 0;
         const maxAttempts = 10;
         
         // Ensure moons don't share similar orbits
         while (attempts < maxAttempts && 
                usedOrbits.some(usedOrbit => Math.abs(moon.orbit.children[1].position.x - usedOrbit) < radius * 3)) {
-            moon = createMoon(radius);
+            moon = createMoon(radius, distanceFromCamera);
             attempts++;
         }
         
@@ -177,8 +201,11 @@ export function createStar() {
     const temperature = Math.random() * (STAR_CONFIG.MAX_TEMP - STAR_CONFIG.MIN_TEMP) + STAR_CONFIG.MIN_TEMP;
     const color = getStarColor(temperature);
     
-    // Create the main star material
-    const material = new THREE.MeshBasicMaterial({ color: color });
+    // Create the main star material with emission
+    const material = new THREE.MeshBasicMaterial({ 
+        color: color,
+        transparent: true
+    });
     const star = new THREE.Mesh(geometry, material);
 
     // Create the glow effect
@@ -196,6 +223,17 @@ export function createStar() {
     });
     const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
     star.add(glowMesh);
+
+    // Create a desaturated version of the star color for lighting
+    const lightColor = new THREE.Color(color);
+    // Mix the star color with white to create a more neutral light
+    lightColor.lerp(new THREE.Color(0xffffff), STAR_CONFIG.LIGHT_DESATURATION);
+
+    // Add point light to the star (initially disabled)
+    const light = new THREE.PointLight(lightColor, STAR_CONFIG.LIGHT_INTENSITY, STAR_CONFIG.LIGHT_DISTANCE);
+    light.visible = false; // Start with light disabled
+    star.add(light);
+    star.light = light; // Store reference to light for easy access
 
     // Use Gaussian distribution for more realistic star clustering
     const range = STAR_CONFIG.SPACE_RANGE;
@@ -229,7 +267,7 @@ export function createStar() {
     if (Math.random() < STAR_CONFIG.HAS_PLANETS_CHANCE) {
         const planetCount = Math.floor(Math.random() * 5) + 1;
         for (let i = 0; i < planetCount; i++) {
-            const planet = createPlanet(star.position);
+            const planet = createPlanet(star.position, distanceFromCenter);
             planets.push(planet);
         }
     }

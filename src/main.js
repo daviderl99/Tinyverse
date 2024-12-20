@@ -64,6 +64,9 @@ function animate() {
     const cameraPosition = new THREE.Vector3();
     camera.getWorldPosition(cameraPosition);
     
+    // Track closest stars for light management
+    const closestStars = [];
+    
     // Rotate planets and moons, and handle visibility
     starSystems.forEach(starSystem => {
         // Check if star is in view and within distance range
@@ -75,6 +78,11 @@ function animate() {
         const starInView = frustum.containsPoint(starPosition);
         const isNearby = distanceToCamera <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
         const isPlanetRange = distanceToCamera <= CAMERA_CONFIG.PLANET_VISIBLE_RANGE;
+        
+        // Track closest stars for lighting
+        if (distanceToCamera <= STAR_CONFIG.LIGHT_DISTANCE) {
+            closestStars.push({ star: starSystem.star, distance: distanceToCamera });
+        }
         
         let opacity = 1;
         if (distanceToCamera > CAMERA_CONFIG.FADE_START) {
@@ -152,6 +160,18 @@ function animate() {
             starSystem.planets.forEach(({ orbit }) => {
                 orbit.visible = false;
             });
+        }
+    });
+
+    // Manage active lights
+    closestStars.sort((a, b) => a.distance - b.distance);
+    const activeStars = closestStars.slice(0, STAR_CONFIG.MAX_ACTIVE_LIGHTS);
+    
+    // Update light visibility
+    starSystems.forEach(starSystem => {
+        const isActive = activeStars.some(active => active.star === starSystem.star);
+        if (starSystem.star.light) {
+            starSystem.star.light.visible = isActive;
         }
     });
     

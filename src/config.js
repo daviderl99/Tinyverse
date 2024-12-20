@@ -10,12 +10,17 @@ export const SCALE = {
 export const CAMERA_CONFIG = {
     FOV: 75,                // Field of view in degrees - higher values create a wider view angle
     NEAR: 0.01,            // Nearest visible distance (0.01 light years ~ 95 billion km)
-    FAR: 100000,               // Farthest visible distance (100,000 light years)
+    FAR: 100000,           // Farthest visible distance (100,000 light years)
     INITIAL_Z: 10,         // Starting distance of 10 light years from center
     FADE_START: 1000,      // Stars start fading at 1,000 light years
     FADE_END: 2000,        // Stars completely fade at 2,000 light years
     ALWAYS_VISIBLE_RANGE: 5, // Stars within this range (in light years) are always visible
-    PLANET_VISIBLE_RANGE: 20 // Only create/show planets for stars within this range
+    PLANET_VISIBLE_RANGE: 20, // Only create/show planets for stars within this range
+    DETAIL_LEVELS: {       // Object detail levels based on distance
+        NEAR: { distance: 5, segments: 64 },
+        MEDIUM: { distance: 20, segments: 32 },
+        FAR: { distance: 50, segments: 16 }
+    }
 };
 
 // Star system generation parameters
@@ -27,15 +32,19 @@ export const STAR_CONFIG = {
     MAX_TEMP: 10000,        // Maximum star temperature in Kelvin (bluer stars)
     SPACE_RANGE: 1000,      // Size of the cubic space (1000 light years per side)
     MIN_DISTANCE: 10,       // Minimum distance between stars (10 light years)
-    HAS_PLANETS_CHANCE: 0.7 // 70% chance a star has planets (based on Kepler data)
+    HAS_PLANETS_CHANCE: 0.7, // 70% chance a star has planets (based on Kepler data)
+    LIGHT_DISTANCE: 20,     // Distance that starlight reaches (in light years)
+    MAX_ACTIVE_LIGHTS: 5,   // Maximum number of active lights at once for performance
+    LIGHT_INTENSITY: 5,    // Base intensity of star lights
+    LIGHT_DESATURATION: 0.3 // How much to mix with white (0 = original color, 1 = pure white)
 };
 
 // Planet generation settings (sizes relative to star)
 export const PLANET_CONFIG = {
     MIN_RADIUS: SCALE.EARTH_RADIUS * SCALE.VISUAL_MULTIPLIER * 5.0,  // Minimum planet size
     MAX_RADIUS: SCALE.EARTH_RADIUS * SCALE.VISUAL_MULTIPLIER * 20.0, // Maximum planet size
-    MIN_ORBIT: 0.5,         // Closest orbit: 1 light year
-    MAX_ORBIT: 5,          // Farthest orbit: 10 light years
+    MIN_ORBIT: 1,         // Closest orbit: 1 light year
+    MAX_ORBIT: 8,          // Farthest orbit: 10 light years
     ATMOSPHERE_CHANCE: 0.3  // Probability (0-1) that a planet will have an atmosphere
 };
 
