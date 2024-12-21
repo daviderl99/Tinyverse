@@ -26,7 +26,7 @@ export function focusOnObject(object) {
     // Adjust distance based on object type
     const distance = selectedType === 'moon' ? CONTROLS_CONFIG.MIN_DISTANCE :
                     selectedType === 'planet' ? CONTROLS_CONFIG.MIN_DISTANCE * 2 : 
-                    CONTROLS_CONFIG.MIN_DISTANCE * 10;
+                    CONTROLS_CONFIG.MIN_DISTANCE * 20;
     
     const startPosition = camera.position.clone();
     const startRotation = controls.target.clone();
@@ -131,18 +131,18 @@ export function handleStarClick(event) {
         }
 
         if (selectedObject === clickedObject) {
-            // Deselect if clicking the same object
-            selectedObject = null;
-            selectedType = null;
-            removeCrosshair();
+            // If clicking the same object, focus on it
+            focusOnObject(selectedObject);
         } else {
-            // Set type and object first
+            // Deselect previous object if any
+            if (selectedObject) {
+                removeCrosshair();
+            }
+            
+            // Select new object
             selectedType = type;
             selectedObject = clickedObject;
-            
-            // Then create crosshair and focus
             createCrosshair(selectedObject, selectedType);
-            focusOnObject(selectedObject);
         }
         
         // Find the star system that was clicked
@@ -225,4 +225,8 @@ export function onMouseMove(event) {
     });
 
     document.body.classList.toggle('star-hover', hoveredStar);
+}
+
+export function getSelectedObject() {
+    return selectedObject;
 }

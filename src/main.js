@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { STAR_CONFIG, CAMERA_CONFIG } from './config.js';
 import { scene, camera, createRenderer, createControls, handleResize } from './scene.js';
-import { initializeStyles } from './ui.js';
+import { initializeStyles, updateCrosshairPosition } from './ui.js';
 import { createStar } from './celestialObjects.js';
-import { onMouseDown, onMouseUp, onKeyPress, onMouseMove, updateOrbitVisibility, initializeControls, getOrbitVisibility, isPaused } from './controls.js';
+import { onMouseDown, onMouseUp, onKeyPress, onMouseMove, updateOrbitVisibility, initializeControls, getOrbitVisibility, isPaused, getSelectedObject } from './controls.js';
 
 // Initialize scene
 const renderer = createRenderer();
@@ -50,6 +50,12 @@ function animate() {
     
     // Update controls
     controls.update();
+    
+    // Update crosshair position if there's a selected object
+    const selectedObject = getSelectedObject();
+    if (selectedObject) {
+        updateCrosshairPosition(selectedObject);
+    }
     
     // Skip updates if paused
     // if (isPaused) return;
