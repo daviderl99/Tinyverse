@@ -14,8 +14,8 @@ export const CAMERA_CONFIG = {
     INITIAL_Z: 10,         // Starting distance of 10 light years from center
     FADE_START: 1000,      // Stars start fading at 1,000 light years
     FADE_END: 2000,        // Stars completely fade at 2,000 light years
-    ALWAYS_VISIBLE_RANGE: 5, // Stars within this range (in light years) are always visible
-    PLANET_VISIBLE_RANGE: 20, // Only create/show planets for stars within this range
+    ALWAYS_VISIBLE_RANGE: 10, // Stars within this range (in light years) are always visible (to exclude from optimization)
+    PLANET_VISIBLE_RANGE: 20, // Only show planets for stars within this range
     DETAIL_LEVELS: {       // Object detail levels based on distance
         NEAR: { distance: 5, segments: 64 },
         MEDIUM: { distance: 20, segments: 32 },
@@ -35,8 +35,8 @@ export const STAR_CONFIG = {
     HAS_PLANETS_CHANCE: 0.7, // 70% chance a star has planets (based on Kepler data)
     LIGHT_DISTANCE: 20,     // Distance that starlight reaches (in light years)
     MAX_ACTIVE_LIGHTS: 5,   // Maximum number of active lights at once for performance
-    LIGHT_INTENSITY: 5,    // Base intensity of star lights
-    LIGHT_DESATURATION: 0.3 // How much to mix with white (0 = original color, 1 = pure white)
+    LIGHT_INTENSITY: 10,    // Base intensity of star lights
+    LIGHT_DESATURATION: 0.7 // How much to mix with white (0 = original color, 1 = pure white)
 };
 
 // Planet generation settings (sizes relative to star)

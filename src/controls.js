@@ -23,8 +23,10 @@ export function focusOnObject(object) {
     const targetPosition = new THREE.Vector3();
     object.getWorldPosition(targetPosition);
     
+    // Adjust distance based on object type
     const distance = selectedType === 'moon' ? CONTROLS_CONFIG.MIN_DISTANCE :
-                    selectedType === 'planet' ? CONTROLS_CONFIG.MIN_DISTANCE * 3 : CONTROLS_CONFIG.MIN_DISTANCE * 20;
+                    selectedType === 'planet' ? CONTROLS_CONFIG.MIN_DISTANCE * 2 : 
+                    CONTROLS_CONFIG.MIN_DISTANCE * 10;
     
     const startPosition = camera.position.clone();
     const startRotation = controls.target.clone();
@@ -86,17 +88,17 @@ export function handleStarClick(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // Set very tight precision for raycasting
-    raycaster.params.Line.threshold = 0.001;
-    raycaster.params.Points.threshold = 0.001;
+    // Set extremely tight precision for raycasting
+    raycaster.params.Line.threshold = 0.0001;
+    raycaster.params.Points.threshold = 0.0001;
     raycaster.params.Mesh.threshold = 0;
     
+    // Get all intersections, not just the first one
     raycaster.setFromCamera(mouse, camera);
-
     let intersects = [];
     scene.traverse(object => {
         if (object instanceof THREE.Mesh) {
-            const intersect = raycaster.intersectObject(object);
+            const intersect = raycaster.intersectObject(object, false); // false = don't check children
             if (intersect.length > 0) {
                 intersects.push({
                     distance: intersect[0].distance,
@@ -107,7 +109,7 @@ export function handleStarClick(event) {
     });
 
     if (intersects.length > 0) {
-        // Sort by distance
+        // Sort by distance - closest first
         intersects.sort((a, b) => a.distance - b.distance);
         const clickedObject = intersects[0].object;
 
@@ -134,9 +136,11 @@ export function handleStarClick(event) {
             selectedType = null;
             removeCrosshair();
         } else {
-            // Select new object
-            selectedObject = clickedObject;
+            // Set type and object first
             selectedType = type;
+            selectedObject = clickedObject;
+            
+            // Then create crosshair and focus
             createCrosshair(selectedObject, selectedType);
             focusOnObject(selectedObject);
         }
@@ -144,7 +148,10 @@ export function handleStarClick(event) {
         // Find the star system that was clicked
         const starSystem = window.starSystems.find(system => 
             system.star === clickedObject || 
-            system.planets.some(planet => planet.mesh === clickedObject)
+            system.planets.some(planet => 
+                planet.mesh === clickedObject ||
+                planet.moons.some(moon => moon.orbit.children[1] === clickedObject)
+            )
         );
         
         if (starSystem) {
