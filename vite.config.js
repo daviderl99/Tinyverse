@@ -5,5 +5,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true
+  },
+  resolve: {
+    alias: {
+      'three': 'three'
+    }
   }
 })

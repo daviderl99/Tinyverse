@@ -44,6 +44,26 @@ export function initializeStyles() {
         .info-panel.visible {
             display: block;
         }
+        .info-panel .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50%;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .info-panel .close-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
         .info-panel .object-preview {
             width: 100%;
             height: 150px;
@@ -174,10 +194,19 @@ export function updateCrosshairPosition(selectedObject) {
 }
 
 export function createInfoPanel() {
-    if (infoPanel) return;
-
     infoPanel = document.createElement('div');
     infoPanel.className = 'info-panel';
+    
+    const closeButton = document.createElement('button');
+    closeButton.className = 'close-button';
+    closeButton.innerHTML = '×';
+    closeButton.onclick = () => {
+        if (infoPanel) {
+            infoPanel.classList.remove('visible');
+        }
+    };
+    
+    infoPanel.appendChild(closeButton);
     document.body.appendChild(infoPanel);
 }
 
@@ -196,7 +225,15 @@ export function updateInfoPanel(object) {
     const color = new THREE.Color(data.color);
     const colorStyle = `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`;
 
-    infoPanel.innerHTML = `
+    // Create content container if it doesn't exist
+    let contentContainer = infoPanel.querySelector('.panel-content');
+    if (!contentContainer) {
+        contentContainer = document.createElement('div');
+        contentContainer.className = 'panel-content';
+        infoPanel.appendChild(contentContainer);
+    }
+
+    contentContainer.innerHTML = `
         <div class="object-preview">
             <div class="sphere" style="background-color: ${colorStyle}"></div>
         </div>
