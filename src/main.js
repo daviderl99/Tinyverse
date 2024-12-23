@@ -3,7 +3,7 @@ import { STAR_CONFIG, CAMERA_CONFIG } from './config.js';
 import { scene, camera, createRenderer, createControls, handleResize } from './scene.js';
 import { initializeStyles, updateCrosshairPosition } from './ui.js';
 import { createStar } from './celestialObjects.js';
-import { onMouseDown, onMouseUp, onKeyPress, onMouseMove, updateOrbitVisibility, initializeControls, getOrbitVisibility, isPaused, getSelectedObject } from './controls.js';
+import { onMouseDown, onMouseUp, onKeyPress, onMouseMove, onWheel, updateOrbitVisibility, initializeControls, getOrbitVisibility, isPaused, getSelectedObject, updateSelectedObjectPosition } from './controls.js';
 
 // Initialize scene
 const renderer = createRenderer();
@@ -21,17 +21,28 @@ for (let i = 0; i < STAR_CONFIG.COUNT; i++) {
     const starSystem = createStar();
     starSystems.push(starSystem);
     scene.add(starSystem.star);
-    starSystem.planets.forEach(planet => {
-        scene.add(planet.orbit);
-        // Set initial orbit visibility
-        planet.orbitLine.visible = false;
-        planet.orbitLine.material.opacity = 0.3; // Keep orbit lines slightly transparent
-        planet.moons.forEach(moon => {
-            moon.orbit.children.forEach(child => {
+    
+    // Add planets from the star's userData
+    starSystem.star.userData.planets.forEach(planet => {
+        const planetObj = planet.parent; // Get the orbit object
+        scene.add(planetObj);
+        
+        // Find and set orbit line visibility
+        planetObj.children.forEach(child => {
+            if (child instanceof THREE.Line) {
+                child.visible = false;
+                child.material.opacity = 0.3;
+            }
+        });
+        
+        // Set moon orbit visibility
+        planet.userData.moons?.forEach(moon => {
+            const moonOrbit = moon.parent;
+            moonOrbit.children.forEach(child => {
                 if (child instanceof THREE.Line) {
-                    child.visible = false;  // Hide moon orbit lines
+                    child.visible = false;
                 } else if (child instanceof THREE.Mesh) {
-                    child.visible = true;   // Show moon meshes
+                    child.visible = true;
                 }
             });
         });
@@ -50,6 +61,9 @@ function animate() {
     
     // Update controls
     controls.update();
+    
+    // Update selected object tracking
+    updateSelectedObjectPosition();
     
     // Update crosshair position if there's a selected object
     const selectedObject = getSelectedObject();
@@ -108,11 +122,13 @@ function animate() {
         }
         
         // Only process planets if they should be visible
-        if (isPlanetRange && starSystem.planets.length > 0) {
-            starSystem.planets.forEach(({ planet, orbit, orbitSpeed, moons, orbitLine }) => {
+        if (isPlanetRange && starSystem.star.userData.planets.length > 0) {
+            starSystem.star.userData.planets.forEach(planet => {
+                const planetObj = planet.parent; // Get the orbit object
+                
                 // Only update orbital motion if not paused
                 if (!isPaused) {
-                    orbit.rotation.y += orbitSpeed;
+                    planetObj.rotation.y += planet.userData.orbitSpeed;
                 }
                 
                 if (starSystem.star.visible || isNearby) {
@@ -122,7 +138,7 @@ function animate() {
                     const planetDistance = planetWorldPos.distanceTo(cameraPosition);
                     const planetNearby = planetDistance <= CAMERA_CONFIG.ALWAYS_VISIBLE_RANGE;
                     
-                    orbit.visible = true;
+                    planetObj.visible = true;
                     planet.visible = planetInView || planetNearby;
                     if (planet.visible) {
                         planet.material.opacity = opacity;
@@ -134,37 +150,52 @@ function animate() {
                     // Update orbit visibility
                     if (planetInView || planetNearby) {
                         if (getOrbitVisibility() && window.lastSelectedStarSystem === starSystem) {
-                            orbitLine.visible = true;
-                            orbitLine.material.opacity = opacity * 0.3;
+                            planetObj.children.forEach(child => {
+                                if (child instanceof THREE.Line) {
+                                    child.visible = true;
+                                    child.material.opacity = opacity * 0.3;
+                                }
+                            });
                         } else {
-                            orbitLine.visible = false;
+                            planetObj.children.forEach(child => {
+                                if (child instanceof THREE.Line) {
+                                    child.visible = false;
+                                }
+                            });
                         }
                     } else {
-                        orbitLine.visible = false;
+                        planetObj.children.forEach(child => {
+                            if (child instanceof THREE.Line) {
+                                child.visible = false;
+                            }
+                        });
                     }
                     
                     // Update moons only if planet is visible
                     if (planet.visible) {
-                        moons.forEach(({ orbit: moonOrbit, orbitSpeed: moonSpeed }) => {
+                        planet.userData.moons?.forEach(moon => {
+                            const moonOrbit = moon.parent;
                             // Only update orbital motion if not paused
                             if (!isPaused) {
-                                moonOrbit.rotation.y += moonSpeed;
+                                moonOrbit.rotation.y += moon.userData.orbitSpeed;
                             }
                             moonOrbit.visible = true;
                         });
                     } else {
-                        moons.forEach(({ orbit: moonOrbit }) => {
+                        planet.userData.moons?.forEach(moon => {
+                            const moonOrbit = moon.parent;
                             moonOrbit.visible = false;
                         });
                     }
                 } else {
-                    orbit.visible = false;
+                    planetObj.visible = false;
                 }
             });
-        } else if (starSystem.planets.length > 0) {
+        } else if (starSystem.star.userData.planets.length > 0) {
             // Hide all planets and moons if star is too far
-            starSystem.planets.forEach(({ orbit }) => {
-                orbit.visible = false;
+            starSystem.star.userData.planets.forEach(planet => {
+                const planetObj = planet.parent; // Get the orbit object
+                planetObj.visible = false;
             });
         }
     });
@@ -189,6 +220,7 @@ window.addEventListener('mousedown', onMouseDown);
 window.addEventListener('mouseup', onMouseUp);
 window.addEventListener('keypress', onKeyPress);
 window.addEventListener('mousemove', onMouseMove);
+window.addEventListener('wheel', onWheel);
 window.addEventListener('resize', () => handleResize(camera, renderer));
 
 // Start animation

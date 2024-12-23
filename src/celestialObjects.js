@@ -30,7 +30,7 @@ function getDetailLevel(distance) {
     return DETAIL_LEVELS.FAR.segments;
 }
 
-export function createMoon(planetRadius, distanceFromCamera) {
+export function createMoon(planetRadius, distanceFromCamera, planetName, moonIndex) {
     const segments = getDetailLevel(distanceFromCamera);
     const radius = planetRadius * (Math.random() * (MOON_CONFIG.MAX_SIZE_RATIO - MOON_CONFIG.MIN_SIZE_RATIO) + MOON_CONFIG.MIN_SIZE_RATIO);
     const geometry = new THREE.SphereGeometry(radius, segments, segments);
@@ -84,10 +84,20 @@ export function createMoon(planetRadius, distanceFromCamera) {
     moon.position.z = orbitRadius * Math.sin(orbitAngle);
     orbit.add(moon);
 
+    // Add metadata
+    moon.userData = {
+        type: 'moon',
+        orbitRadius: orbitRadius,
+        orbitSpeed: orbitSpeed,
+        orbitAngle: orbitAngle,
+        orbitTilt: orbitTilt,
+        name: `${planetName} ${moonIndex}`
+    };
+
     return { orbit, orbitSpeed };
 }
 
-export function createPlanet(starPosition, distanceFromCamera) {
+export function createPlanet(starPosition, distanceFromCamera, starName, planetSuffix) {
     const segments = getDetailLevel(distanceFromCamera);
     const radius = Math.random() * (PLANET_CONFIG.MAX_RADIUS - PLANET_CONFIG.MIN_RADIUS) + PLANET_CONFIG.MIN_RADIUS;
     const geometry = new THREE.SphereGeometry(radius, segments, segments);
@@ -142,6 +152,17 @@ export function createPlanet(starPosition, distanceFromCamera) {
     planet.position.z = orbitRadius * Math.sin(orbitAngle);
     orbit.add(planet);
 
+    // Add metadata
+    planet.userData = {
+        type: 'planet',
+        orbitRadius: orbitRadius,
+        orbitSpeed: orbitSpeed,
+        orbitAngle: orbitAngle,
+        orbitTilt: orbitTilt,
+        moons: [],
+        name: `${starName}-${planetSuffix.toUpperCase()}`
+    };
+
     // Add random number of moons based on config
     const moonCount = Math.floor(Math.random() * (MOON_CONFIG.MAX_MOONS - MOON_CONFIG.MIN_MOONS + 1)) + MOON_CONFIG.MIN_MOONS;
     const moons = [];
@@ -149,20 +170,22 @@ export function createPlanet(starPosition, distanceFromCamera) {
     // Create moons with non-overlapping orbits
     const usedOrbits = [];
     for (let i = 0; i < moonCount; i++) {
-        let moon = createMoon(radius, distanceFromCamera);  
+        let moon = createMoon(radius, distanceFromCamera, planet.userData.name, i + 1);  
         let attempts = 0;
         const maxAttempts = 10;
         
         // Ensure moons don't share similar orbits
         while (attempts < maxAttempts && 
                usedOrbits.some(usedOrbit => Math.abs(moon.orbit.children[1].position.x - usedOrbit) < radius * 3)) {
-            moon = createMoon(radius, distanceFromCamera);
+            moon = createMoon(radius, distanceFromCamera, planet.userData.name, i + 1);
             attempts++;
         }
         
         if (attempts < maxAttempts) {
             usedOrbits.push(moon.orbit.children[1].position.x);
             planet.add(moon.orbit);  
+            const moonMesh = moon.orbit.children[1];  // Get the moon mesh
+            planet.userData.moons.push(moonMesh);  // Store reference to the moon
             moons.push(moon);
         }
     }
@@ -207,6 +230,17 @@ export function createStar() {
         transparent: true
     });
     const star = new THREE.Mesh(geometry, material);
+
+    // Generate star name
+    const starName = generateStarName();
+    
+    // Add metadata
+    star.userData = {
+        type: 'star',
+        temperature: temperature,
+        planets: [],
+        name: starName
+    };
 
     // Create the glow effect
     const glowGeometry = new THREE.SphereGeometry(radius * 1.2, 32, 32);
@@ -258,23 +292,43 @@ export function createStar() {
 
     star.position.copy(position);
 
-    if (!window.existingStars) window.existingStars = [];
-    window.existingStars.push(star);
-
-    const distanceFromCenter = position.length();
-    const planets = [];
-    
+    // Add planets
     if (Math.random() < STAR_CONFIG.HAS_PLANETS_CHANCE) {
-        const planetCount = Math.floor(Math.random() * 5) + 1;
+        const planetCount = Math.floor(Math.random() * STAR_CONFIG.MAX_PLANETS) + 1;  // 1 to MAX_PLANETS
         for (let i = 0; i < planetCount; i++) {
-            const planet = createPlanet(star.position, distanceFromCenter);
-            planets.push(planet);
+            const planet = createPlanet(star.position, position.length(), starName, String.fromCharCode(97 + i)); // a, b, c, d, e
+            star.userData.planets.push(planet.planet); // Store reference to the planet
         }
     }
 
+    if (!window.existingStars) window.existingStars = [];
+    window.existingStars.push(star);
+
     return {
         star,
-        planets,
-        distanceFromCenter
+        distanceFromCenter: position.length()
     };
+}
+
+// Helper functions for generating names
+function generateStarName() {
+    const prefixes = ['Kepler', 'Trappist', 'Gliese', 'HD', 'Wolf', 'Ross', 'Proxima', 'Tau', 'Sirius', 'Vega'];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const number = Math.floor(Math.random() * 9999) + 1;
+    return `${prefix}-${number}`;
+}
+
+function generatePlanetName() {
+    const prefixes = ['Nova', 'Terra', 'Astra', 'Stella', 'Luna', 'Caelum', 'Atlas', 'Helios', 'Kronos', 'Orion'];
+    const suffixes = ['Prime', 'Major', 'Minor', 'Alpha', 'Beta', 'Gamma', 'I', 'II', 'III', 'IV'];
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    return `${prefix} ${suffix}`;
+}
+
+function generateMoonName() {
+    const names = ['Phobos', 'Deimos', 'Io', 'Europa', 'Ganymede', 'Callisto', 'Titan', 'Enceladus', 'Triton', 'Charon'];
+    const suffix = Math.floor(Math.random() * 99) + 1;
+    const name = names[Math.floor(Math.random() * names.length)];
+    return `${name}-${suffix}`;
 }

@@ -15,7 +15,7 @@ export const CAMERA_CONFIG = {
     FADE_START: 1000,      // Stars start fading at 1,000 light years
     FADE_END: 2000,        // Stars completely fade at 2,000 light years
     ALWAYS_VISIBLE_RANGE: 10, // Stars within this range (in light years) are always visible (to exclude from optimization)
-    PLANET_VISIBLE_RANGE: 20, // Only show planets for stars within this range
+    PLANET_VISIBLE_RANGE: 40, // Only show planets for stars within this range
     DETAIL_LEVELS: {       // Object detail levels based on distance
         NEAR: { distance: 5, segments: 64 },
         MEDIUM: { distance: 20, segments: 32 },
@@ -33,6 +33,7 @@ export const STAR_CONFIG = {
     SPACE_RANGE: 1000,      // Size of the cubic space (1000 light years per side)
     MIN_DISTANCE: 10,       // Minimum distance between stars (10 light years)
     HAS_PLANETS_CHANCE: 0.7, // 70% chance a star has planets (based on Kepler data)
+    MAX_PLANETS: 10,         // Maximum number of planets per star
     LIGHT_DISTANCE: 20,     // Distance that starlight reaches (in light years)
     MAX_ACTIVE_LIGHTS: 5,   // Maximum number of active lights at once for performance
     LIGHT_INTENSITY: 10,    // Base intensity of star lights
@@ -44,7 +45,7 @@ export const PLANET_CONFIG = {
     MIN_RADIUS: SCALE.EARTH_RADIUS * SCALE.VISUAL_MULTIPLIER * 5.0,  // Minimum planet size
     MAX_RADIUS: SCALE.EARTH_RADIUS * SCALE.VISUAL_MULTIPLIER * 20.0, // Maximum planet size
     MIN_ORBIT: 1,         // Closest orbit: 1 light year
-    MAX_ORBIT: 8,          // Farthest orbit: 10 light years
+    MAX_ORBIT: 12,          // Farthest orbit: 10 light years
     ATMOSPHERE_CHANCE: 0.3  // Probability (0-1) that a planet will have an atmosphere
 };
 

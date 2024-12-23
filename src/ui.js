@@ -1,7 +1,10 @@
 import { camera } from './scene.js';
 import * as THREE from 'three';
+import { SCALE } from './config.js';
+import { getObjectData } from './celestialData.js';
 
 let crosshairElement = null;
+let infoPanel = null;
 
 // Create and append CSS styles
 export function initializeStyles() {
@@ -23,6 +26,88 @@ export function initializeStyles() {
             transform: translate(-50%, -50%);
             z-index: 1000;
             opacity: 0.8;
+        }
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            font-family: Arial, sans-serif;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            color: #fff;
+            z-index: 1000;
+            display: none;
+        }
+        .info-panel.visible {
+            display: block;
+        }
+        .info-panel .object-preview {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .info-panel .object-preview .sphere {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            box-shadow: inset -25px -25px 40px rgba(0,0,0,.5);
+            position: relative;
+        }
+        .info-panel .object-preview .sphere::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: inherit;
+            border-radius: 50%;
+            filter: blur(10px);
+            opacity: 0.7;
+            z-index: -1;
+        }
+        .info-panel .object-preview .sphere::after {
+            content: '';
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            background: inherit;
+            border-radius: 50%;
+            filter: blur(5px);
+            opacity: 0.3;
+            z-index: -1;
+        }
+        .info-panel h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #fff;
+        }
+        .info-panel .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+        .info-panel .data-row:last-child {
+            border-bottom: none;
+        }
+        .info-panel .label {
+            color: #aaa;
+        }
+        .info-panel .value {
+            color: #fff;
+            text-align: right;
         }
     `;
     document.head.appendChild(style);
@@ -86,4 +171,67 @@ export function updateCrosshairPosition(selectedObject) {
             crosshairElement.style.display = 'none';
         }
     }
+}
+
+export function createInfoPanel() {
+    if (infoPanel) return;
+
+    infoPanel = document.createElement('div');
+    infoPanel.className = 'info-panel';
+    document.body.appendChild(infoPanel);
+}
+
+export function updateInfoPanel(object) {
+    if (!infoPanel) createInfoPanel();
+    
+    if (!object) {
+        infoPanel.classList.remove('visible');
+        return;
+    }
+
+    const data = getObjectData(object);
+    if (!data) return;
+
+    // Convert hex color to CSS format
+    const color = new THREE.Color(data.color);
+    const colorStyle = `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`;
+
+    infoPanel.innerHTML = `
+        <div class="object-preview">
+            <div class="sphere" style="background-color: ${colorStyle}"></div>
+        </div>
+        <h2>${data.name}</h2>
+        ${data.starType ? `
+        <div class="data-row">
+            <span class="label">Type:</span>
+            <span class="value">${data.starType}</span>
+        </div>
+        <div class="data-row">
+            <span class="label">Temperature:</span>
+            <span class="value">${data.temperature} K</span>
+        </div>
+        <div class="data-row">
+            <span class="label">Planets:</span>
+            <span class="value">${data.numPlanets}</span>
+        </div>
+        ` : ''}
+        ${data.numMoons !== undefined ? `
+        <div class="data-row">
+            <span class="label">Moons:</span>
+            <span class="value">${data.numMoons}</span>
+        </div>
+        ` : ''}
+        <div class="data-row">
+            <span class="label">Radius:</span>
+            <span class="value">${data.radius.toLocaleString()} km</span>
+        </div>
+        ${data.orbitRadius ? `
+        <div class="data-row">
+            <span class="label">Orbit Radius:</span>
+            <span class="value">${data.orbitRadius} LY</span>
+        </div>
+        ` : ''}
+    `;
+    
+    infoPanel.classList.add('visible');
 }
